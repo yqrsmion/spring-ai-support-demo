@@ -1,6 +1,6 @@
 spring:
   application:
-    name: spring-ai-interview-demo
+    name: spring-ai-support-demo
   ai:
     model:
       chat: deepseek
