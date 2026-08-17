@@ -37,3 +37,7 @@ Accept: text/event-stream
 ### 10. 记忆持久化：重启服务后追问（同一 conversationId，模型应还记得）
 GET http://localhost:8080/api/chat/stream?conversationId=persist-1&message=我叫什么名字？
 Accept: text/event-stream
+
+### 11. 简化版 RAG：问知识库政策细节（响应带 rag 字段，回答会引用知识库内容）
+GET http://localhost:8080/api/chat?conversationId=support-1&message=质量问题的退货运费由谁承担？
+Accept: application/json

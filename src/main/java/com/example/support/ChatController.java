@@ -1,6 +1,7 @@
 package com.example.support;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -27,11 +28,14 @@ public class ChatController {
     private final ChatClient chatClient;
     private final TokenBucketRateLimiter rateLimiter;
     private final ModelGateway modelGateway;
+    private final SimpleRetriever retriever;
 
-    public ChatController(ChatClient supportChatClient, TokenBucketRateLimiter rateLimiter, ModelGateway modelGateway) {
+    public ChatController(ChatClient supportChatClient, TokenBucketRateLimiter rateLimiter,
+                          ModelGateway modelGateway, SimpleRetriever retriever) {
         this.chatClient = supportChatClient;
         this.rateLimiter = rateLimiter;
         this.modelGateway = modelGateway;
+        this.retriever = retriever;
     }
 
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -57,11 +61,21 @@ public class ChatController {
                     ServerSentEvent.builder("[DONE]").event("done").build());
         }
 
+        // 简化版 RAG：检索知识库命中则注入上下文
+        List<String> hits = retriever.search(realMessage);
+        String prompt = hits.isEmpty()
+                ? realMessage
+                : retriever.toContext(hits) + "\n\n用户问题：" + realMessage;
+        int hitCount = hits.size();
+
         // 对比演示：一边实时推送 chunk，一边累积完整内容
         StringBuilder full = new StringBuilder();
         return Flux.concat(
                         Mono.just(ServerSentEvent.builder(modelGateway.modelName(modelAlias)).event("model").build()),
-                        modelGateway.stream(realMessage, conversationId, modelAlias)
+                        hitCount > 0
+                                ? Mono.just(ServerSentEvent.builder("命中" + hitCount + "个知识块").event("rag").build())
+                                : Flux.empty(),
+                        modelGateway.stream(prompt, conversationId, modelAlias)
                                 .map(content -> {
                                     full.append(content);
                                     return ServerSentEvent.builder(content).event("chunk").build();
@@ -103,11 +117,18 @@ public class ChatController {
             log.warn("rate limited: /api/chat");
             return Mono.just(Map.of("conversationId", conversationId, "error", "请求过于频繁，请稍后再试"));
         }
-        return modelGateway.call(realMessage, conversationId, modelAlias)
+        // 简化版 RAG：检索知识库命中则注入上下文
+        List<String> hits = retriever.search(realMessage);
+        String prompt = hits.isEmpty()
+                ? realMessage
+                : retriever.toContext(hits) + "\n\n用户问题：" + realMessage;
+
+        return modelGateway.call(prompt, conversationId, modelAlias)
                 .timeout(MODEL_TIMEOUT)
                 .map(result -> Map.of(
                         "conversationId", conversationId,
                         "model", result.modelUsed(),
+                        "rag", hits.isEmpty() ? "off" : "命中" + hits.size() + "个知识块",
                         "reply", result.reply()))
                 .onErrorResume(error -> {
                     log.warn("chat error: {}", error.getMessage());

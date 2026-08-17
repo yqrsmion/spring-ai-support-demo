@@ -38,7 +38,12 @@ curl.exe -N "http://localhost:8080/api/chat/stream?conversationId=support-1&mess
 - FAQ 查询：问"退换货政策是什么？"触发 `searchFaq`；
 - 订单查询：问"订单 10002 什么状态？"触发 `getOrderStatus`（模拟数据）；
 - 客服指标：问"满意度怎么样？"触发 `getSupportMetrics`（模拟数据）；
-- 会话记忆：同一 `conversationId` 连续对话会记住上下文。
+- 会话记忆：同一 `conversationId` 连续对话会记住上下文；记忆按会话持久化到
+  `data/memory/*.json`，重启服务后依然记得；
+- 模型网关：支持 `chat / reasoner / flash / pro` 多模型路由（`&model=` 参数或
+  `/model 别名` 命令），主模型失败自动降级到默认模型；
+- 简化版 RAG：问"质量问题的退货运费由谁承担？"会检索 `docs/support-policy.md`
+  并注入上下文回答（响应带 `rag` 字段）。
 
 ## 第一版的边界
 

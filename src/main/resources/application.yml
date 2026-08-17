@@ -28,6 +28,9 @@ app:
   memory:
     dir: ./data/memory
     max-messages: 20
+  rag:
+    doc-path: docs/support-policy.md
+    top-k: 2
 
 logging:
   level:
