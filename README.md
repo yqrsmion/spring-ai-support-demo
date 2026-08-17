@@ -33,6 +33,21 @@ mvn spring-boot:run
 4. 浏览器打开 `http://localhost:8080` 直接聊天，或运行工程根目录 `requests.http`
    （1-11 条请求覆盖全部功能）。
 
+## 效果预览
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/images/rag-function-calling.png" alt="RAG、function calling" width="280"></td>
+    <td align="center"><img src="docs/images/model-switching.png" alt="模型切换" width="280"></td>
+    <td align="center"><img src="docs/images/memory-persistence.png" alt="会话记忆" width="280"></td>
+  </tr>
+  <tr>
+    <td align="center">RAG、function calling<br>回复引用知识库政策原文</td>
+    <td align="center">模型切换<br>/model reasoner 推理风格回答</td>
+    <td align="center">会话记忆<br>重启服务后仍记得名字</td>
+  </tr>
+</table>
+
 ## 组件结构
 
 | 组件 | 职责 |
