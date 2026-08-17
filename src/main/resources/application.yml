@@ -25,6 +25,9 @@ app:
     refill-per-second: 2
   gateway:
     default-model: deepseek-chat
+  memory:
+    dir: ./data/memory
+    max-messages: 20
 
 logging:
   level:

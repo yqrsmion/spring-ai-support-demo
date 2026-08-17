@@ -29,3 +29,11 @@ Accept: application/json
 ### 8. 多模型切换：消息内命令 /model flash
 GET http://localhost:8080/api/chat/stream?conversationId=support-1&message=/model flash 你好
 Accept: text/event-stream
+
+### 9. 记忆持久化：先让模型记住名字（随后重启服务，再执行第 10 条）
+GET http://localhost:8080/api/chat/stream?conversationId=persist-1&message=我叫yqr，请记住我的名字
+Accept: text/event-stream
+
+### 10. 记忆持久化：重启服务后追问（同一 conversationId，模型应还记得）
+GET http://localhost:8080/api/chat/stream?conversationId=persist-1&message=我叫什么名字？
+Accept: text/event-stream

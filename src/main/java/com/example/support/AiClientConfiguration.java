@@ -1,10 +1,11 @@
 package com.example.support;
 
+import java.nio.file.Path;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -12,10 +13,11 @@ import org.springframework.context.annotation.Configuration;
 public class AiClientConfiguration {
 
     @Bean
-    ChatMemory chatMemory() {
-        return MessageWindowChatMemory.builder()
-                .maxMessages(12)
-                .build();
+    ChatMemory chatMemory(
+            @Value("${app.memory.dir:./data/memory}") String memoryDir,
+            @Value("${app.memory.max-messages:20}") int maxMessages) {
+        // 本地 JSON 文件持久化：重启后同一 conversationId 的记忆仍在
+        return new FileChatMemory(Path.of(memoryDir), maxMessages);
     }
 
     @Bean
