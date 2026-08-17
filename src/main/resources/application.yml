@@ -23,6 +23,8 @@ app:
   rate-limit:
     capacity: 20
     refill-per-second: 2
+  gateway:
+    default-model: deepseek-chat
 
 logging:
   level:

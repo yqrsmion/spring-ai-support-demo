@@ -26,18 +26,29 @@ public class ChatController {
 
     private final ChatClient chatClient;
     private final TokenBucketRateLimiter rateLimiter;
+    private final ModelGateway modelGateway;
 
-    public ChatController(ChatClient supportChatClient, TokenBucketRateLimiter rateLimiter) {
+    public ChatController(ChatClient supportChatClient, TokenBucketRateLimiter rateLimiter, ModelGateway modelGateway) {
         this.chatClient = supportChatClient;
         this.rateLimiter = rateLimiter;
+        this.modelGateway = modelGateway;
     }
 
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> stream(
             @RequestParam String message,
-            @RequestParam(defaultValue = "demo-session") String conversationId) {
+            @RequestParam(defaultValue = "demo-session") String conversationId,
+            @RequestParam(required = false) String model) {
         if (!StringUtils.hasText(message)) {
             return Flux.just(ServerSentEvent.builder("message 不能为空").event("error").build());
+        }
+        ModelGateway.ParsedCommand command = ModelGateway.parseCommand(message);
+        String realMessage = command.message();
+        String modelAlias = model != null ? model : command.modelAlias();
+        if (!StringUtils.hasText(realMessage)) {
+            return Flux.just(
+                    ServerSentEvent.builder("命令格式：/model 模型别名 问题内容").event("error").build(),
+                    ServerSentEvent.builder("[DONE]").event("done").build());
         }
         if (!rateLimiter.tryAcquire()) {
             log.warn("rate limited: /api/chat/stream");
@@ -48,15 +59,13 @@ public class ChatController {
 
         // 对比演示：一边实时推送 chunk，一边累积完整内容
         StringBuilder full = new StringBuilder();
-        return chatClient.prompt()
-                .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, conversationId))
-                .user(message)
-                .stream()
-                .content()
-                .map(content -> {
-                    full.append(content);
-                    return ServerSentEvent.builder(content).event("chunk").build();
-                })
+        return Flux.concat(
+                        Mono.just(ServerSentEvent.builder(modelGateway.modelName(modelAlias)).event("model").build()),
+                        modelGateway.stream(realMessage, conversationId, modelAlias)
+                                .map(content -> {
+                                    full.append(content);
+                                    return ServerSentEvent.builder(content).event("chunk").build();
+                                }))
                 // 流结束后，把累积的完整文本一次性吐出来
                 .concatWith(Mono.fromCallable(() ->
                         ServerSentEvent.builder(full.toString()).event("full").build()))
@@ -79,23 +88,27 @@ public class ChatController {
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public Mono<Map<String, String>> chat(
             @RequestParam String message,
-            @RequestParam(defaultValue = "demo-session") String conversationId) {
+            @RequestParam(defaultValue = "demo-session") String conversationId,
+            @RequestParam(required = false) String model) {
         if (!StringUtils.hasText(message)) {
             return Mono.just(Map.of("error", "message 不能为空"));
+        }
+        ModelGateway.ParsedCommand command = ModelGateway.parseCommand(message);
+        String realMessage = command.message();
+        String modelAlias = model != null ? model : command.modelAlias();
+        if (!StringUtils.hasText(realMessage)) {
+            return Mono.just(Map.of("conversationId", conversationId, "error", "命令格式：/model 模型别名 问题内容"));
         }
         if (!rateLimiter.tryAcquire()) {
             log.warn("rate limited: /api/chat");
             return Mono.just(Map.of("conversationId", conversationId, "error", "请求过于频繁，请稍后再试"));
         }
-        return Mono.fromCallable(() ->
-                        chatClient.prompt()
-                                .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, conversationId))
-                                .user(message)
-                                .call()
-                                .content())
-                .subscribeOn(Schedulers.boundedElastic())
+        return modelGateway.call(realMessage, conversationId, modelAlias)
                 .timeout(MODEL_TIMEOUT)
-                .map(reply -> Map.of("conversationId", conversationId, "reply", reply))
+                .map(result -> Map.of(
+                        "conversationId", conversationId,
+                        "model", result.modelUsed(),
+                        "reply", result.reply()))
                 .onErrorResume(error -> {
                     log.warn("chat error: {}", error.getMessage());
                     return Mono.just(Map.of(
