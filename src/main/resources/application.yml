@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: spring-ai-interview-demo
+  ai:
+    model:
+      chat: deepseek
+    deepseek:
+      api-key: ${DEEPSEEK_API_KEY:}
+      chat:
+        model: deepseek-chat
+        temperature: 0.3
+    retry:
+      max-attempts: 2
+      backoff:
+        initial-interval: 500ms
+        multiplier: 2
+        max-interval: 2s
+
+server:
+  port: 8080
+
+logging:
+  level:
+    org.springframework.ai: INFO

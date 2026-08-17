@@ -1,0 +1,23 @@
+### 1. 流式对话：触发 FAQ 工具（退换货政策；流结束后追加 full 事件返回完整内容，便于对比）
+GET http://localhost:8080/api/chat/stream?conversationId=support-1&message=你们的退换货政策是什么？
+Accept: text/event-stream
+
+### 2. 触发订单查询工具（模拟订单 10002）
+GET http://localhost:8080/api/chat/stream?conversationId=support-1&message=帮我查一下订单 10002 现在什么状态？
+Accept: text/event-stream
+
+### 3. 触发客服指标工具（会话量 / 响应时长 / 满意度）
+GET http://localhost:8080/api/chat/stream?conversationId=support-1&message=今天客服的满意度怎么样？平均多久响应？
+Accept: text/event-stream
+
+### 4. 会话记忆：先让模型记住名字（conversationId=support-1）
+GET http://localhost:8080/api/chat/stream?conversationId=support-1&message=我叫李雷，请记住我的名字
+Accept: text/event-stream
+
+### 5. 会话记忆：同一 conversationId 追问名字（模型应记得）
+GET http://localhost:8080/api/chat/stream?conversationId=support-1&message=我叫什么名字？
+Accept: text/event-stream
+
+### 6. 非流式：一次返回完整回答（内容已整合，适合看最终结果）
+GET http://localhost:8080/api/chat?conversationId=support-1&message=帮我查一下订单 10003 现在什么状态？
+Accept: application/json
