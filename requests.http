@@ -11,7 +11,7 @@ GET http://localhost:8080/api/chat/stream?conversationId=support-1&message=今�
 Accept: text/event-stream
 
 ### 4. 会话记忆：先让模型记住名字（conversationId=support-1）
-GET http://localhost:8080/api/chat/stream?conversationId=support-1&message=我叫李雷，请记住我的名字
+GET http://localhost:8080/api/chat/stream?conversationId=support-1&message=我叫yqr，请记住我的名字
 Accept: text/event-stream
 
 ### 5. 会话记忆：同一 conversationId 追问名字（模型应记得）

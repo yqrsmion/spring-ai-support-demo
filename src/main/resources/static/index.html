@@ -48,6 +48,24 @@
             white-space: pre-wrap;
             word-break: break-word;
         }
+        .msg p { margin: 2px 0; }
+        .msg ul, .msg ol { margin: 4px 0; padding-left: 22px; }
+        .msg code {
+            background: #f3f4f6;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .msg pre {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 10px 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        .msg pre code { background: transparent; color: inherit; padding: 0; }
+        .msg table { border-collapse: collapse; margin: 6px 0; }
+        .msg th, .msg td { border: 1px solid #d1d5db; padding: 4px 10px; }
         .user { align-self: flex-end; background: #2563eb; color: #fff; }
         .assistant { align-self: flex-start; background: #fff; border: 1px solid #e5e7eb; }
         .error { align-self: flex-start; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
@@ -96,6 +114,7 @@
 </div>
 <div class="hint">流式打字效果：服务端 SSE 逐段推送，前端实时拼接。</div>
 
+<script src="vendor/marked.min.js"></script>
 <script>
     const messagesEl = document.getElementById('messages');
     const inputEl = document.getElementById('input');
@@ -120,12 +139,30 @@
         return div;
     }
 
+    function escapeHtml(text) {
+        return text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function render(text) {
+        const safe = escapeHtml(text);
+        if (window.marked) {
+            return marked.parse(safe, { breaks: true });
+        }
+        return safe.replace(/\n/g, '<br>');
+    }
+
     function send() {
         const message = inputEl.value.trim();
         if (!message) return;
         inputEl.value = '';
         addMsg(message, 'user');
         const reply = addMsg('', 'assistant');
+        let raw = '';
         sendBtn.disabled = true;
 
         const url = '/api/chat/stream?conversationId=' + encodeURIComponent(conversationId)
@@ -133,16 +170,18 @@
         const es = new EventSource(url);
 
         es.addEventListener('chunk', (e) => {
-            reply.textContent += e.data;
+            raw += e.data;
+            reply.innerHTML = render(raw);
             messagesEl.scrollTop = messagesEl.scrollHeight;
         });
         es.addEventListener('full', (e) => {
-            reply.textContent = e.data;
+            raw = e.data;
+            reply.innerHTML = render(raw);
             messagesEl.scrollTop = messagesEl.scrollHeight;
         });
         es.addEventListener('error', (e) => {
             reply.classList.add('error');
-            reply.textContent += e.data || '（连接中断，请重试）';
+            reply.innerHTML = render(raw + (e.data || '（连接中断，请重试）'));
             messagesEl.scrollTop = messagesEl.scrollHeight;
         });
         es.addEventListener('done', () => {
