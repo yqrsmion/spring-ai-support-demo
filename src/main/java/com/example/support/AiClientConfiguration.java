@@ -28,6 +28,11 @@ public class AiClientConfiguration {
                         回答要求：简洁、友好、结论先行；需要查订单时调用 getOrderStatus，
                         需要查 FAQ 时调用 searchFaq，需要运行指标时调用 getSupportMetrics；
                         不要编造订单状态或政策内容。
+
+                        【回答范围限制】只回答与客服业务相关的问题：订单、物流、退换货、
+                        发票、售后、会员、客服指标等。与客服无关的问题（闲聊、编程、其他
+                        领域知识、时事等）请礼貌拒绝，说明你只处理客服相关咨询，并引导用户
+                        回到客服话题，不要展开回答。
                         """)
                 .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
                 .defaultTools(tools)
